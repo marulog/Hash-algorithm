@@ -6,23 +6,31 @@ import psutil
 import os
 import multiprocessing
 
-# 테스트할 해시 알고리즘 목록
-HASH_ALGORITHMS = {
-    "sha2": lambda data: hashlib.sha256(data).hexdigest(),
-    "sha3": lambda data: hashlib.sha3_256(data).hexdigest(),
-    "blake2": lambda data: hashlib.blake2b(data).hexdigest(),
-    "blake3": lambda data: blake3.blake3(data).hexdigest(),
-    "xxh3": lambda data: xxhash.xxh3_64(data).hexdigest(),
-    "md5": lambda data: hashlib.md5(data).hexdigest(),
-}
-
-# 테스트할 파일 경로
+# 파일 경로
 FILE_PATH = "upload/10MB.bin"
 
+# 해싱 알고리즘 별 함수 정의 (lambda 사용 X)
+def hash_sha2(data): return hashlib.sha256(data).hexdigest()
+def hash_sha3(data): return hashlib.sha3_256(data).hexdigest()
+def hash_blake2(data): return hashlib.blake2b(data).hexdigest()
+def hash_blake3(data): return blake3.blake3(data).hexdigest()
+def hash_xxh3(data): return xxhash.xxh3_64(data).hexdigest()
+def hash_md5(data): return hashlib.md5(data).hexdigest()
+
+# 해시 함수 매핑
+HASH_ALGORITHMS = {
+    "sha2": hash_sha2,
+    "sha3": hash_sha3,
+    "blake2": hash_blake2,
+    "blake3": hash_blake3,
+    "xxh3": hash_xxh3,
+    "md5": hash_md5,
+}
+
 def get_system_info():
-    """현재 CPU 개수와 총 메모리 크기를 출력"""
+    """현재 CPU 개수와 총 메모리 크기 출력"""
     cpu_count = os.cpu_count()
-    total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 단위 변환
+    total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 변환
     print(f"🖥 현재 CPU 개수: {cpu_count} 개")
     print(f"💾 총 메모리 크기: {total_memory:.2f} GB")
     print("=" * 50)
@@ -36,7 +44,7 @@ def measure_performance(hash_name, hash_func, file_path):
 
     # 초기 메모리 및 CPU 사용량 측정
     start_cpu = process.cpu_percent(interval=None)
-    start_mem = process.memory_info().rss / 1024 / 1024  # MB
+    start_mem = process.memory_full_info().rss / 1024 / 1024  # MB
     start_time = time.time()
 
     # 해싱 실행 (멀티코어 최적화: 같은 데이터 10번 해싱)
@@ -45,7 +53,7 @@ def measure_performance(hash_name, hash_func, file_path):
 
     end_time = time.time()
     end_cpu = process.cpu_percent(interval=None)
-    end_mem = process.memory_info().rss / 1024 / 1024  # MB
+    end_mem = process.memory_full_info().rss / 1024 / 1024  # MB
 
     # 성능 측정
     hash_speed = (end_time - start_time) / 10  # 평균 해싱 속도
@@ -78,7 +86,7 @@ def estimate_temperature(cpu_usage):
 def run_tests():
     """멀티코어(병렬 처리)로 해시 함수 성능 테스트 실행"""
     print("🔹 멀티코어 해싱 성능 테스트 시작")
-    
+
     # 시스템 정보 출력
     get_system_info()
 
