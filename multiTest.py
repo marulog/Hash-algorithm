@@ -31,7 +31,7 @@ def get_system_info():
     """현재 CPU 개수와 총 메모리 크기 출력"""
     cpu_count = os.cpu_count()
     total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 변환
-    print(f"🖥 현재 CPU 개수: {cpu_count} 개")
+    print(f"🖥 현재 CPU 개수: {len(os.sched_getaffinity(0))} 개")
     print(f"💾 총 메모리 크기: {total_memory:.2f} GB")
     print("=" * 50)
 
