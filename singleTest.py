@@ -18,6 +18,14 @@ HASH_ALGORITHMS = {
 # 테스트할 파일 경로
 FILE_PATH = "upload/10MB.bin"
 
+def get_system_info():
+    """현재 CPU 개수와 총 메모리 크기 출력"""
+    cpu_count = os.cpu_count()
+    total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 단위 변환
+    print(f"🖥 현재 CPU 개수: {cpu_count} 개")
+    print(f"💾 총 메모리 크기: {total_memory:.2f} GB")
+    print("=" * 50)
+
 def measure_performance(hash_name, hash_func, file_path):
     """해싱 속도, CPU 사용량, 전력 소비량, 발열 측정"""
 
@@ -25,10 +33,11 @@ def measure_performance(hash_name, hash_func, file_path):
     with open(file_path, "rb") as f:
         data = f.read()
 
-    # CPU 사용량 및 전력 소비 측정 전 초기화
     process = psutil.Process(os.getpid())
+
+    # 초기 메모리 및 CPU 사용량 측정
     start_cpu = process.cpu_percent(interval=None)
-    start_mem = process.memory_info().rss / 1024 / 1024  # MB
+    start_mem = process.memory_full_info().rss / 1024 / 1024  # MB
     start_time = time.time()
 
     # 해싱 실행
@@ -36,7 +45,7 @@ def measure_performance(hash_name, hash_func, file_path):
 
     end_time = time.time()
     end_cpu = process.cpu_percent(interval=None)
-    end_mem = process.memory_info().rss / 1024 / 1024  # MB
+    end_mem = process.memory_full_info().rss / 1024 / 1024  # MB
 
     # 성능 측정
     hash_speed = end_time - start_time  # 해싱 속도
@@ -76,7 +85,13 @@ def estimate_temperature(cpu_usage):
     return base_temp + (cpu_usage * temp_factor)
 
 if __name__ == "__main__":
-    print("🔹 멀티코어 해싱 성능 테스트 시작")
+    print("🔹 싱글코어 해싱 성능 테스트 시작")
+    
+    # 시스템 정보 출력
+    get_system_info()
+
+    # 싱글코어 모드로 실행 (CPU 1개만 사용)
+    # os.sched_setaffinity(0, {0}) -> 일단 명령어로 실행
 
     # 모든 해시 알고리즘 테스트 실행
     results = []
