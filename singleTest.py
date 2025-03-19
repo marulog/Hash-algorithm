@@ -4,6 +4,7 @@ import xxhash
 import time
 import psutil
 import os
+import resource
 
 # 테스트할 해시 알고리즘 목록
 HASH_ALGORITHMS = {
@@ -18,6 +19,20 @@ HASH_ALGORITHMS = {
 # 테스트할 파일 경로
 FILE_PATH = "upload/10MB.bin"
 
+def limit_resources():
+    """CPU를 1개로 제한하고 메모리를 1GB로 제한"""
+    try:
+        # CPU 제한 (1개만 사용)
+        os.sched_setaffinity(0, {0})
+        
+        # 메모리 제한 (1GB = 1024 * 1024 * 1024 Bytes)
+        mem_limit = 1 * 1024 * 1024 * 1024  # 1GB
+        resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+
+        print("✅ CPU 1개 및 1GB 메모리 제한 설정 완료")
+    except Exception as e:
+        print(f"⚠️ 리소스 제한 설정 실패: {e}")
+
 def get_system_info():
     """현재 CPU 개수와 총 메모리 크기 출력"""
     cpu_count = os.cpu_count()
@@ -28,7 +43,7 @@ def get_system_info():
 
 def measure_performance(hash_name, hash_func, file_path):
     """해싱 속도, CPU 사용량, 전력 소비량, 발열 측정"""
-
+    
     # 파일 로드
     with open(file_path, "rb") as f:
         data = f.read()
@@ -86,12 +101,12 @@ def estimate_temperature(cpu_usage):
 
 if __name__ == "__main__":
     print("🔹 싱글코어 해싱 성능 테스트 시작")
-    
+
+    # CPU 및 메모리 제한 설정
+    limit_resources()
+
     # 시스템 정보 출력
     get_system_info()
-
-    # 싱글코어 모드로 실행 (CPU 1개만 사용)
-    # os.sched_setaffinity(0, {0}) -> 일단 명령어로 실행
 
     # 모든 해시 알고리즘 테스트 실행
     results = []
