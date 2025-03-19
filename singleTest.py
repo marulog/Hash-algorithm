@@ -73,13 +73,13 @@ def measure_performance(hash_name, hash_func, file_path):
     temperature = estimate_temperature(cpu_usage)  # CPU 온도
 
     # 결과 출력
-    print(f"🔍 {hash_name.upper()} 테스트 결과")
-    print(f" - 해싱 속도: {hash_speed:.5f} 초")
-    print(f" - CPU 사용량: {cpu_usage:.2f}%")
-    print(f" - 메모리 사용량: {memory_usage:.2f} MB")
-    print(f" - 전력 소비량: {power_consumption:.2f} W")
-    print(f" - CPU 온도: {temperature:.2f}°C")
-    print("-" * 50)
+    # print(f"🔍 {hash_name.upper()} 테스트 결과")
+    # print(f" - 해싱 속도: {hash_speed:.5f} 초")
+    # print(f" - CPU 사용량: {cpu_usage:.2f}%")
+    # print(f" - 메모리 사용량: {memory_usage:.2f} MB")
+    # print(f" - 전력 소비량: {power_consumption:.2f} W")
+    # print(f" - CPU 온도: {temperature:.2f}°C")
+    # print("-" * 50)
 
     return {
         "hash": hash_name,
