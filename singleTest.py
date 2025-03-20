@@ -13,7 +13,6 @@ HASH_ALGORITHMS = {
     "sha3": lambda data: hashlib.sha3_256(data).hexdigest(),
     "blake2": lambda data: hashlib.blake2b(data).hexdigest(),
     "blake3": lambda data: blake3.blake3(data).hexdigest(),
-    # "xxh3": lambda data: xxhash.xxh3_64(data).hexdigest(),
     "md5": lambda data: hashlib.md5(data).hexdigest(),
 }
 
@@ -31,14 +30,18 @@ def limit_resources():
         print(f"⚠️ 리소스 제한 설정 실패: {e}")
 
 def get_system_info():
-    """현재 CPU 개수와 총 메모리 크기 출력 + 프로세스 최대 메모리 제한 확인"""
+    """현재 CPU 개수와 시스템 메모리 사용량 출력"""
     cpu_count = len(os.sched_getaffinity(0))
     total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 변환
-    process_memory_limit = resource.getrlimit(resource.RLIMIT_AS)[0] / 1024 / 1024 / 1024  # GB 변환
+    used_memory = psutil.virtual_memory().used / 1024 / 1024 / 1024  # GB 변환
+    available_memory = psutil.virtual_memory().available / 1024 / 1024 / 1024  # GB 변환
+    process_memory = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024  # MB 변환
 
     print(f"🖥 현재 CPU 개수: {cpu_count} 개")
     print(f"💾 총 시스템 메모리 크기: {total_memory:.2f} GB")
-    print(f"🚫 현재 프로세스 최대 메모리 제한: {process_memory_limit:.2f} GB")
+    print(f"📌 사용 중인 시스템 메모리: {used_memory:.2f} GB")
+    print(f"🔄 사용 가능한 메모리: {available_memory:.2f} GB")
+    print(f"⚡ 현재 프로세스 메모리 사용량: {process_memory:.2f} MB")
     print("=" * 50)
 
 def measure_performance(hash_name, hash_func, file_path, runs=10):
@@ -53,32 +56,38 @@ def measure_performance(hash_name, hash_func, file_path, runs=10):
     speeds, cpu_usages, memory_usages, powers, temperatures = [], [], [], [], []
 
     for _ in range(runs):
-        start_cpu = process.cpu_percent(interval=None)
-        start_mem = process.memory_info().rss / 1024 / 1024  # MB
+        start_cpu = process.cpu_percent(interval=0.1)  # interval=0.1 추가 (CPU 사용량 오류 수정)
+        start_mem = process.memory_info().rss / 1024 / 1024  # MB 변환
         start_time = time.time()
 
         # 해싱 실행
         hash_result = hash_func(data)
 
         end_time = time.time()
-        end_cpu = process.cpu_percent(interval=None)
-        end_mem = process.memory_info().rss / 1024 / 1024  # MB
+        end_cpu = process.cpu_percent(interval=0.1)  # interval=0.1 추가 (CPU 사용량 오류 수정)
+        end_mem = process.memory_info().rss / 1024 / 1024  # MB 변환
+
+        # CPU 사용량이 음수로 나오면 0으로 보정
+        cpu_usage = max(0, end_cpu - start_cpu)
+
+        # 메모리 사용량이 음수로 나오면 0으로 보정
+        memory_usage = max(0, end_mem - start_mem)
 
         # 성능 측정
         speeds.append(end_time - start_time)  # 속도 (초)
-        cpu_usages.append(end_cpu - start_cpu)  # CPU 사용량 (%)
-        memory_usages.append(end_mem - start_mem)  # 메모리 사용량 (MB)
-        powers.append(estimate_power(cpu_usages[-1]))  # 전력 사용량 (W)
-        temperatures.append(estimate_temperature(cpu_usages[-1]))  # 온도 (°C)
+        cpu_usages.append(cpu_usage)  # CPU 사용량 (%)
+        memory_usages.append(memory_usage)  # 메모리 사용량 (MB)
+        powers.append(estimate_power(cpu_usage))  # 전력 사용량 (W)
+        temperatures.append(estimate_temperature(cpu_usage))  # 온도 (°C)
 
-    # 평균값 계산
+    # 평균값 계산 (np.float64 → float 변환 추가)
     return {
         "hash": hash_name,
-        "speed": np.mean(speeds),
-        "cpu_usage": np.mean(cpu_usages),
-        "memory_usage": np.mean(memory_usages),
-        "power": np.mean(powers),
-        "temperature": np.mean(temperatures)
+        "speed": float(np.mean(speeds)),  
+        "cpu_usage": float(np.mean(cpu_usages)),  
+        "memory_usage": float(np.mean(memory_usages)),  
+        "power": float(np.mean(powers)),  
+        "temperature": float(np.mean(temperatures))  
     }
 
 def estimate_power(cpu_usage):
