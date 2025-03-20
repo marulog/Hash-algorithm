@@ -17,7 +17,7 @@ HASH_ALGORITHMS = {
 }
 
 # 테스트할 파일 경로
-FILE_PATH = "upload/10MB.bin"
+FILE_PATH = "upload/100MB.enc"
 
 def limit_resources():
     """CPU를 1개로 제한하고 메모리를 1GB로 제한"""

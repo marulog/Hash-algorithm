@@ -7,7 +7,7 @@ import os
 import multiprocessing
 
 # 파일 경로
-FILE_PATH = "upload/10MB.bin"
+FILE_PATH = "upload/100MB.enc"
 
 # 해싱 알고리즘 별 함수 정의 (lambda 사용 X)
 def hash_sha2(data): return hashlib.sha256(data).hexdigest()
