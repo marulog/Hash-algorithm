@@ -9,15 +9,16 @@ import numpy as np  # 평균 계산을 위한 라이브러리 추가
 
 # 테스트할 해시 알고리즘 목록
 HASH_ALGORITHMS = {
-    "sha2": lambda data: hashlib.sha256(data).hexdigest(),
-    "sha3": lambda data: hashlib.sha3_256(data).hexdigest(),
-    "blake2": lambda data: hashlib.blake2b(data).hexdigest(),
-    "blake3": lambda data: blake3.blake3(data).hexdigest(),
-    "md5": lambda data: hashlib.md5(data).hexdigest(),
+    "sha2": hashlib.sha256,
+    "sha3": hashlib.sha3_256,
+    "blake2": hashlib.blake2b,
+    "blake3": blake3.blake3,
+    "md5": hashlib.md5,
 }
 
 # 테스트할 파일 경로
 FILE_PATH = "upload/1000MB.enc"
+BLOCK_SIZE = 64 * 1024  # 64KB 블록 단위로 읽기
 
 def limit_resources():
     """CPU를 1개로 제한하고 메모리를 1GB로 제한"""
@@ -46,25 +47,25 @@ def get_system_info():
 
 def measure_performance(hash_name, hash_func, file_path, runs=10):
     """해싱 성능을 여러 번 실행하여 평균값을 반환"""
-    
     process = psutil.Process(os.getpid())
-
-    # 파일 로드
-    with open(file_path, "rb") as f:
-        data = f.read()
 
     speeds, cpu_usages, memory_usages, powers, temperatures = [], [], [], [], []
 
     for _ in range(runs):
-        start_cpu = process.cpu_percent(interval=0.1)  # interval=0.1 추가 (CPU 사용량 오류 수정)
+        # 해시 객체 생성
+        hasher = hash_func()
+
+        start_cpu = process.cpu_percent(interval=0.1)
         start_mem = process.memory_info().rss / 1024 / 1024  # MB 변환
         start_time = time.time()
 
-        # 해싱 실행
-        hash_result = hash_func(data)
+        # 파일을 64KB 블록 단위로 읽어서 해싱
+        with open(file_path, "rb") as f:
+            while chunk := f.read(BLOCK_SIZE):
+                hasher.update(chunk)
 
         end_time = time.time()
-        end_cpu = process.cpu_percent(interval=0.1)  # interval=0.1 추가 (CPU 사용량 오류 수정)
+        end_cpu = process.cpu_percent(interval=0.1)
         end_mem = process.memory_info().rss / 1024 / 1024  # MB 변환
 
         # CPU 사용량이 음수로 나오면 0으로 보정
