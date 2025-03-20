@@ -31,11 +31,14 @@ def limit_resources():
         print(f"⚠️ 리소스 제한 설정 실패: {e}")
 
 def get_system_info():
-    """현재 CPU 개수와 총 메모리 크기 출력"""
+    """현재 CPU 개수와 총 메모리 크기 출력 + 프로세스 최대 메모리 제한 확인"""
     cpu_count = len(os.sched_getaffinity(0))
     total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 변환
+    process_memory_limit = resource.getrlimit(resource.RLIMIT_AS)[0] / 1024 / 1024 / 1024  # GB 변환
+
     print(f"🖥 현재 CPU 개수: {cpu_count} 개")
     print(f"💾 총 시스템 메모리 크기: {total_memory:.2f} GB")
+    print(f"🚫 현재 프로세스 최대 메모리 제한: {process_memory_limit:.2f} GB")
     print("=" * 50)
 
 def measure_performance(hash_name, hash_func, file_path, runs=10):
