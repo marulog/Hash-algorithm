@@ -14,7 +14,7 @@ def hash_sha2(data): return hashlib.sha256(data).hexdigest()
 def hash_sha3(data): return hashlib.sha3_256(data).hexdigest()
 def hash_blake2(data): return hashlib.blake2b(data).hexdigest()
 def hash_blake3(data): return blake3.blake3(data).hexdigest()
-def hash_xxh3(data): return xxhash.xxh3_64(data).hexdigest()
+# def hash_xxh3(data): return xxhash.xxh3_64(data).hexdigest()
 def hash_md5(data): return hashlib.md5(data).hexdigest()
 
 # 해시 함수 매핑
@@ -23,7 +23,7 @@ HASH_ALGORITHMS = {
     "sha3": hash_sha3,
     "blake2": hash_blake2,
     "blake3": hash_blake3,
-    "xxh3": hash_xxh3,
+    # "xxh3": hash_xxh3,
     "md5": hash_md5,
 }
 

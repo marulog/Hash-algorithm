@@ -5,6 +5,7 @@ import time
 import psutil
 import os
 import resource
+import numpy as np  # 평균 계산을 위한 라이브러리 추가
 
 # 테스트할 해시 알고리즘 목록
 HASH_ALGORITHMS = {
@@ -12,7 +13,7 @@ HASH_ALGORITHMS = {
     "sha3": lambda data: hashlib.sha3_256(data).hexdigest(),
     "blake2": lambda data: hashlib.blake2b(data).hexdigest(),
     "blake3": lambda data: blake3.blake3(data).hexdigest(),
-    "xxh3": lambda data: xxhash.xxh3_64(data).hexdigest(),
+    # "xxh3": lambda data: xxhash.xxh3_64(data).hexdigest(),
     "md5": lambda data: hashlib.md5(data).hexdigest(),
 }
 
@@ -22,72 +23,59 @@ FILE_PATH = "upload/100MB.enc"
 def limit_resources():
     """CPU를 1개로 제한하고 메모리를 1GB로 제한"""
     try:
-        # CPU 제한 (1개만 사용)
-        os.sched_setaffinity(0, {0})
-        
-        # 메모리 제한 (1GB = 1024 * 1024 * 1024 Bytes)
-        mem_limit = 1 * 1024 * 1024 * 1024  # 1GB
+        os.sched_setaffinity(0, {0})  # CPU 1개만 사용
+        mem_limit = 1 * 1024 * 1024 * 1024  # 1GB 메모리 제한
         resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
-
         print("✅ CPU 1개 및 1GB 메모리 제한 설정 완료")
     except Exception as e:
         print(f"⚠️ 리소스 제한 설정 실패: {e}")
 
 def get_system_info():
-    """현재 CPU 개수와 총 메모리 크기 출력 + 프로세스 최대 메모리 제한 확인"""
+    """현재 CPU 개수와 총 메모리 크기 출력"""
     cpu_count = len(os.sched_getaffinity(0))
     total_memory = psutil.virtual_memory().total / 1024 / 1024 / 1024  # GB 변환
-    process_memory_limit = resource.getrlimit(resource.RLIMIT_AS)[0] / 1024 / 1024 / 1024  # GB 변환
-
     print(f"🖥 현재 CPU 개수: {cpu_count} 개")
     print(f"💾 총 시스템 메모리 크기: {total_memory:.2f} GB")
-    print(f"🚫 현재 프로세스 최대 메모리 제한: {process_memory_limit:.2f} GB")
     print("=" * 50)
 
-def measure_performance(hash_name, hash_func, file_path):
-    """해싱 속도, CPU 사용량, 전력 소비량, 발열 측정"""
+def measure_performance(hash_name, hash_func, file_path, runs=10):
+    """해싱 성능을 여러 번 실행하여 평균값을 반환"""
     
+    process = psutil.Process(os.getpid())
+
     # 파일 로드
     with open(file_path, "rb") as f:
         data = f.read()
 
-    process = psutil.Process(os.getpid())
+    speeds, cpu_usages, memory_usages, powers, temperatures = [], [], [], [], []
 
-    # 초기 메모리 및 CPU 사용량 측정
-    start_cpu = process.cpu_percent(interval=None)
-    start_mem = process.memory_full_info().rss / 1024 / 1024  # MB
-    start_time = time.time()
+    for _ in range(runs):
+        start_cpu = process.cpu_percent(interval=None)
+        start_mem = process.memory_info().rss / 1024 / 1024  # MB
+        start_time = time.time()
 
-    # 해싱 실행
-    hash_result = hash_func(data)
+        # 해싱 실행
+        hash_result = hash_func(data)
 
-    end_time = time.time()
-    end_cpu = process.cpu_percent(interval=None)
-    end_mem = process.memory_full_info().rss / 1024 / 1024  # MB
+        end_time = time.time()
+        end_cpu = process.cpu_percent(interval=None)
+        end_mem = process.memory_info().rss / 1024 / 1024  # MB
 
-    # 성능 측정
-    hash_speed = end_time - start_time  # 해싱 속도
-    cpu_usage = end_cpu - start_cpu  # CPU 사용량
-    memory_usage = end_mem - start_mem  # 메모리 사용량
-    power_consumption = estimate_power(cpu_usage)  # 전력 소비량
-    temperature = estimate_temperature(cpu_usage)  # CPU 온도
+        # 성능 측정
+        speeds.append(end_time - start_time)  # 속도 (초)
+        cpu_usages.append(end_cpu - start_cpu)  # CPU 사용량 (%)
+        memory_usages.append(end_mem - start_mem)  # 메모리 사용량 (MB)
+        powers.append(estimate_power(cpu_usages[-1]))  # 전력 사용량 (W)
+        temperatures.append(estimate_temperature(cpu_usages[-1]))  # 온도 (°C)
 
-    # 결과 출력
-    # print(f"🔍 {hash_name.upper()} 테스트 결과")
-    # print(f" - 해싱 속도: {hash_speed:.5f} 초")
-    # print(f" - CPU 사용량: {cpu_usage:.2f}%")
-    # print(f" - 메모리 사용량: {memory_usage:.2f} MB")
-    # print(f" - 전력 소비량: {power_consumption:.2f} W")
-    # print(f" - CPU 온도: {temperature:.2f}°C")
-    # print("-" * 50)
-
+    # 평균값 계산
     return {
         "hash": hash_name,
-        "speed": hash_speed,
-        "cpu_usage": cpu_usage,
-        "memory_usage": memory_usage,
-        "power": power_consumption,
-        "temperature": temperature
+        "speed": np.mean(speeds),
+        "cpu_usage": np.mean(cpu_usages),
+        "memory_usage": np.mean(memory_usages),
+        "power": np.mean(powers),
+        "temperature": np.mean(temperatures)
     }
 
 def estimate_power(cpu_usage):
@@ -114,9 +102,10 @@ if __name__ == "__main__":
     # 모든 해시 알고리즘 테스트 실행
     results = []
     for name, func in HASH_ALGORITHMS.items():
-        results.append(measure_performance(name, func, FILE_PATH))
+        result = measure_performance(name, func, FILE_PATH)
+        results.append(result)
 
     # 테스트 결과 출력
-    print("\n📊 전체 테스트 결과")
+    print("\n📊 전체 테스트 결과 (10회 평균)")
     for result in results:
         print(result)
